@@ -14,6 +14,7 @@
 #endif
 #include "ps2.h"
 
+
 #define PS2_RESET 0xFF
 #define PS2_RESEND 0xFE
 #define PS2_SETDEFAULTS 0xF6

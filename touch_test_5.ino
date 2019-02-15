@@ -1,14 +1,13 @@
 #include <bluefruit.h>
 #include <Wire.h>
-#include "./ps2.h"
-#include "./Trackpad.h"
+#include "./src/trackpad_flat.h"
+#include "./src/ps2_flat.h"
+
 
 // Bluetooth
 BLEDis bledis;
 BLEHidAdafruit blehid;
 
-//clk, data
-Trackpad t(MOSI,MISO);
 
 // Mouse Positions
 int mouseLastAbsX = 0;
@@ -18,7 +17,7 @@ int mouseLastY = 0;
 
 void checkMouse () {
   status_t * status;
-  status = t.getNewStatus();
+  status = trackpadGetNewStatus();
 
   int mouseAbsX = status->x;
   int mouseAbsY = status->y;
@@ -89,6 +88,10 @@ void setup()
   pinMode(A3, INPUT_PULLUP);
   pinMode(A4, INPUT_PULLUP);
   pinMode(A5, INPUT_PULLUP); 
+
+  
+  //clk, data
+  trackpadBegin (MOSI, MISO);
 }
 
 
@@ -118,4 +121,3 @@ void loop() {
 
   delay (1);
 }
-
