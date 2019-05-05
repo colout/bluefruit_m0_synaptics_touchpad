@@ -1,99 +1,57 @@
-/*
-  ArduixPL - xPL library for Arduino(tm)
-  Copyright (c) 2012/2013 Mathieu GRENET.  All right reserved.
+#include "trackpad.h"
 
-  This file is part of ArduixPL.
+status_t status;
 
-    ArduixPL is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    ArduixPL is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with ArduixPL.  If not, see <http://www.gnu.org/licenses/>.
-
-	  Modified 2013-2-4 by Mathieu GRENET 
-	  mailto:mathieu@mgth.fr
-	  http://www.mgth.fr
-*/
-/*
-  trackpad.cpp - Library for interfacing with synaptic trackpads.
-  Created by Joe Rickerby, July 2008.
-  Released into the public domain.
-*/
-#include "Trackpad.h"
-
-#define BITPOS(n) (1<<(n))
-#define DUMP(d) Serial.print(#d ": ");\
-Serial.print(d,HEX);Serial.print(" ");\
-Serial.print(d,BIN);Serial.println()
-
-Trackpad::Trackpad(int clk, int data)
+void trackpadBegin (int clk, int data)
 {
-	//I've created my own new operator, see the cppfix.cpp file
-	mouse = new PS2(clk,data);
+	PS2Begin(clk,data);
 	
-	mouse->write(0xff);	// reset
-	mouse->read();	 // ack byte
-	mouse->read();	 // blank 
-	mouse->read();	 // blank 
-	mouse->write(0xf0);	// remote mode
-	mouse->read();	 // ack
+	PS2Write(0xff);	// reset
+	PS2Read();	 // ack byte
+	PS2Read();	 // blank 
+	PS2Read();	 // blank 
+	PS2Write(0xf0);	// remote mode
+	PS2Read();	 // ack
 	
 	//set mode byte- absolute mode, wmode
 	/*
 	b7				b6		b5					b4					b3			b2					b1			b0
 	|Absolute mMde	|Rate	|Transparent Mode	|Guest ACPI Mode	|Sleep		|DisGest / EWmode	|PackSize	|Wmode
 	*/
-	sendComSeq(B10000001, true);
-	sendComSeq(PS2_IDENTIFY, false);
-	sendComSeq(PS2_MODES, false);
-	sendComSeq(PS2_CAPABILITIES, false);
-	sendComSeq(PS2_READRESOLUTIONS, false);
-	sendComSeq(PS2_EXTENDEDMODELID, false);
-	sendComSeq(PS2_EXTENDEDCONTINUED, false);
-	sendComSeq(PS2_MAXIMUMCOORDS, false);
-	sendComSeq(PS2_MINIMUMCOORDS, false);
+	trackpadSendComSeq(B11000001, true);
+	trackpadSendComSeq(PS2_IDENTIFY, false);
+	trackpadSendComSeq(PS2_MODES, false);
+	trackpadSendComSeq(PS2_CAPABILITIES, false);
+	trackpadSendComSeq(PS2_READRESOLUTIONS, false);
+	trackpadSendComSeq(PS2_EXTENDEDMODELID, false);
+	trackpadSendComSeq(PS2_EXTENDEDCONTINUED, false);
+	trackpadSendComSeq(PS2_MAXIMUMCOORDS, false);
+	trackpadSendComSeq(PS2_MINIMUMCOORDS, false);
 	
 	delayMicroseconds(100);
 }
 
-Trackpad::~Trackpad()
-{
-	delete mouse;
-}
-
-//Details are available in the synaptic interfacing guide- this is a bit of a nasty one.
-//Synaptic special commands are hidden in Set Resolution commands, so that the data will make
-//it through the BIOS on a PC unscathed.
-void Trackpad::sendComSeq(byte arg, boolean setMode)
-{
-	
-	mouse->write(PS2_SETRES);
-	mouse->write((arg & 0xc0)>>6);
-	mouse->read();	 // ack byte
-	mouse->write(PS2_SETRES);
-	mouse->write((arg & 0x30)>>4);
-	mouse->read();	 // ack byte
-	mouse->write(PS2_SETRES);
-	mouse->write((arg & 0x0c)>>2);
-	mouse->read();	 // ack byte
-	mouse->write(PS2_SETRES);
-	mouse->write(arg & 0x03);
-	mouse->read();	 // ack byte
+void trackpadSendComSeq (byte arg, boolean setMode) {
+	PS2Write(PS2_SETRES);
+	PS2Write((arg & 0xc0)>>6);
+	PS2Read();	 // ack byte
+	PS2Write(PS2_SETRES);
+	PS2Write((arg & 0x30)>>4);
+	PS2Read();	 // ack byte
+	PS2Write(PS2_SETRES);
+	PS2Write((arg & 0x0c)>>2);
+	PS2Read();	 // ack byte
+	PS2Write(PS2_SETRES);
+	PS2Write(arg & 0x03);
+	PS2Read();	 // ack byte
 
 	if(setMode == false) {
-		mouse->write(PS2_GETINFO);
-		mouse->read();	 // ack byte
+		PS2Write(PS2_GETINFO);
+		PS2Read();	 // ack byte
 		
-		status.d1 = mouse->read();
-		status.d2 = mouse->read();
-		status.d3 = mouse->read();
+		status.d1 = PS2Read();
+		status.d2 = PS2Read();
+		status.d3 = PS2Read();
 
 		if (arg == PS2_IDENTIFY) {
 			status.synapticMinor=status.d1;
@@ -134,18 +92,16 @@ void Trackpad::sendComSeq(byte arg, boolean setMode)
 			status.yMin |= (status.d3) << 4;
 		}
 	} else {
-		mouse->write(PS2_SETRATE);
-		mouse->read();	 // ack byte
-		mouse->write(0x14);
-		mouse->read();	 // ack byte
+		PS2Write(PS2_SETRATE);
+		PS2Read();	 // ack byte
+		PS2Write(0x14);
+		PS2Read();	 // ack byte
 	}
 }
 
-/*
-	See the Synaptic interfacing guide for the derivation of all that bitwise nonsense
-	down there.
-*/
-status_t * Trackpad::getNewStatus()
+
+
+status_t * trackpadGetNewStatus()
 {
 	bool error = false;
 
@@ -156,28 +112,28 @@ status_t * Trackpad::getNewStatus()
 	byte p5;
 	byte p6;
 
-	mouse->write(0xeb);	 // give me data!
-	byte ack = mouse->read();			// ignore ack
-    if (mouse->error) error = true;
+	PS2Write(0xeb);	 // give me data!
+	byte ack = PS2Read();			// ignore ack
+    if (PS2Error) error = true;
 
 	if (ack == 0xfa) {
-		p1 = mouse->read();
-        if (mouse->error) error = true;
+		p1 = PS2Read();
+        if (PS2Error) error = true;
 
-		p2 = mouse->read();
-        if (mouse->error) error = true;
+		p2 = PS2Read();
+        if (PS2Error) error = true;
 
-		p3 = mouse->read();
-        if (mouse->error) error = true;
+		p3 = PS2Read();
+        if (PS2Error) error = true;
         
-		p4 = mouse->read();
-        if (mouse->error) error = true;
+		p4 = PS2Read();
+        if (PS2Error) error = true;
 
-		p5 = mouse->read();
-        if (mouse->error) error = true;
+		p5 = PS2Read();
+        if (PS2Error) error = true;
 
-		p6 = mouse->read();
-        if (mouse->error) error = true;
+		p6 = PS2Read();
+        if (PS2Error) error = true;
 
 		/*
 		Packets when WMode == 0
@@ -233,7 +189,7 @@ status_t * Trackpad::getNewStatus()
             status.p5 = p5;
             status.p6 = p6;
         }
-        if (Serial) {Serial.print("Error:"); Serial.println(error);}
+        if (Serial) {if (error) { Serial.println('*************SERIAL ERROR');}}
 	} else
 	{
 		//delay(2);

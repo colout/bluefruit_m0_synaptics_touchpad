@@ -9,7 +9,7 @@
  *      probably lots of room for optimization.
  */
 
-#include "ps2_flat.h"
+#include "ps2.h"
 
 /*
  * the clock and data pins can be wired directly to the clk and data pins
@@ -74,11 +74,11 @@ void PS2Write(unsigned char data)
     // This is the idle bus state
 	gohi(_ps2data);
 	gohi(_ps2clk);
-	delayMicroseconds(100);
+	delayMicroseconds(50);
 	
     // Inhibit communication
     golo(_ps2clk);  
-	delayMicroseconds(100);
+	delayMicroseconds(50);
 
     // Request to send state
 	golo(_ps2data); 
@@ -126,7 +126,7 @@ void PS2Write(unsigned char data)
 	// Let's be greedy and hold the clock to ourselves
 	golo(_ps2clk);
     if (PS2Error) delayMicroseconds(500);
-    if (!PS2Error) delayMicroseconds(50);
+    if (!PS2Error) delayMicroseconds(15);
 }
 
 
@@ -144,7 +144,7 @@ unsigned char PS2Read(void)
 	// high clock / data for 50 micros means ready
 	gohi(_ps2clk);
 	gohi(_ps2data);
-	delayMicroseconds(50); 
+	delayMicroseconds(25); 
 
   // Start bit == 0
   waitpin(_ps2clk, HIGH, true);
@@ -173,7 +173,7 @@ unsigned char PS2Read(void)
 
 	golo(_ps2clk);	// hold incoming data
     if (PS2Error) delayMicroseconds(200);
-    if (!PS2Error) delayMicroseconds(50);
+    if (!PS2Error) delayMicroseconds(15);
 	return data;
 }
 
