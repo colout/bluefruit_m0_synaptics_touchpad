@@ -1,7 +1,3 @@
-/*
-	trackpad.h
-	Written by Joe Rickerby
-*/
 
 #ifndef Trackpad_h
 #define Trackpad_h
@@ -94,17 +90,9 @@ typedef struct _status_t {
 	unsigned int yMin;
 } status_t;
 
-class Trackpad
-{
-	public:
-		Trackpad(int clk, int data);
-		~Trackpad();
-		status_t * getNewStatus();
-	private:
-		void sendComSeq(byte args, boolean setMode = false);
-		PS2 * mouse;
-		status_t status;
-};
+extern void trackpadBegin (int clk, int data);
+extern void trackpadSendComSeq (byte arg, boolean setMode);
+extern status_t * trackpadGetNewStatus();
+extern status_t status;
 
 #endif /* trackpad_h */
-

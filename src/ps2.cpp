@@ -15,7 +15,11 @@
  * the clock and data pins can be wired directly to the clk and data pins
  * of the PS2 connector.  No external parts are needed.
  */
-PS2::PS2(int clk, int data)
+bool PS2Error;
+int _ps2clk;
+int _ps2data;
+
+void PS2Begin(int clk, int data)
 {
 	_ps2clk = clk;
 	_ps2data = data;
@@ -29,26 +33,27 @@ PS2::PS2(int clk, int data)
  * various conditions.  It's done this way so you don't need
  * pullup resistors.
  */
-void PS2::gohi(int pin)
+void gohi(int pin)
 {
 	pinMode(pin, INPUT);
 	digitalWrite(pin, HIGH);
 }
 
-void PS2::golo(int pin)
+void golo(int pin)
 {
 	pinMode(pin, OUTPUT);
 	digitalWrite(pin, LOW);
 
 }
 
-void PS2::waitpin(int pin, bool state, bool padded, unsigned int timeout = 1000) {
+void waitpin(int pin, bool state, bool padded, unsigned int timeout) {
     unsigned long timeOutBy = micros() + timeout;  // timeout
 
-    if (!error) {
+    timeout = 1000;
+    if (!PS2Error) {
         while (digitalRead(pin) == state) {
             if  (micros() > timeOutBy) {
-                error = true;
+                PS2Error = true;
                 break;
             }
         }
@@ -60,20 +65,20 @@ void PS2::waitpin(int pin, bool state, bool padded, unsigned int timeout = 1000)
 }
 
 /* write a byte to the PS2 device */
-void PS2::write(unsigned char data)
+void PS2Write(unsigned char data)
 {
-    error = false;
+    PS2Error = false;
 	unsigned char i;
 	unsigned char parity = 1;
 	
     // This is the idle bus state
 	gohi(_ps2data);
 	gohi(_ps2clk);
-	delayMicroseconds(100);
+	delayMicroseconds(50);
 	
     // Inhibit communication
     golo(_ps2clk);  
-	delayMicroseconds(100);
+	delayMicroseconds(50);
 
     // Request to send state
 	golo(_ps2data); 
@@ -120,26 +125,26 @@ void PS2::write(unsigned char data)
 
 	// Let's be greedy and hold the clock to ourselves
 	golo(_ps2clk);
-    if (error) delayMicroseconds(500);
-    if (!error) delayMicroseconds(50);
+    if (PS2Error) delayMicroseconds(500);
+    if (!PS2Error) delayMicroseconds(15);
 }
 
 
 /*
  * read a byte of data from the ps2 device.  Ignores parity.
  */
-unsigned char PS2::read(void)
+unsigned char PS2Read(void)
 {
 	unsigned char data = 0x00;
 	unsigned char i;
 	unsigned char bit = 0x01;
 
-    error = false;
+    PS2Error = false;
 
 	// high clock / data for 50 micros means ready
 	gohi(_ps2clk);
 	gohi(_ps2data);
-	delayMicroseconds(50); 
+	delayMicroseconds(25); 
 
   // Start bit == 0
   waitpin(_ps2clk, HIGH, true);
@@ -158,7 +163,7 @@ unsigned char PS2::read(void)
 	}
 
     waitpin(_ps2clk, HIGH, true);
-    if (digitalRead(_ps2data) != has_even_parity(data)) error=true;
+    if (digitalRead(_ps2data) != has_even_parity(data)) PS2Error=true;
     waitpin(_ps2clk, LOW, true);
 
 	// eat stop bit
@@ -167,12 +172,12 @@ unsigned char PS2::read(void)
 
 
 	golo(_ps2clk);	// hold incoming data
-    if (error) delayMicroseconds(200);
-    if (!error) delayMicroseconds(50);
+    if (PS2Error) delayMicroseconds(200);
+    if (!PS2Error) delayMicroseconds(15);
 	return data;
 }
 
-bool PS2::has_even_parity(unsigned char x) 
+bool has_even_parity(unsigned char x) 
 {
     unsigned char shift=1;
     while (shift < (sizeof(x)*8))
